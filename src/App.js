@@ -89,6 +89,9 @@ export default function App() {
     const translate = () => {
         const object = allCanvas[0].ref.getObjects()
         const text_list = object.map(({text}) => text)
+        if(!text_list.length){
+            return
+        }
         setAllCanvas([...allCanvas.map(item => ({...item, waiting: true}))])
         v2Client().post('/creative_texts/translate', {
             text_list,
@@ -141,7 +144,7 @@ export default function App() {
         </Header>
         <Layout>
             <Content >
-                <div onKeyPress={e => console.log(e)} className="canvas-wrapper">
+                <div className="canvas-wrapper">
                     {allCanvas.map((data, index) => <Canvas
                         size={size}
                         key={data.language}
