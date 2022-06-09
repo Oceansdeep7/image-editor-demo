@@ -9,7 +9,7 @@ const { TabPane } = Tabs;
 function ToolBox(props){
 
     const { allCanvas, targetLanguage, setTargetLanguage,
-        activeElement, activeCanvas, setActiveElement, setSize, size } = props
+        activeElement, activeCanvas, setActiveElement, setSize, size, zoom } = props
     const [activeKey, setActiveKey] = useState("资源")
 
     // async function loadFonts() {
@@ -29,7 +29,7 @@ function ToolBox(props){
 
     return <Tabs onChange={setActiveKey} activeKey={activeKey}>
         <TabPane tab="资源" key="资源">
-            <Asset allCanvas={allCanvas}/>
+            <Asset allCanvas={allCanvas} zoom={zoom}/>
         </TabPane>
         <TabPane tab="属性" key="属性">
             <Attribute
@@ -44,6 +44,7 @@ function ToolBox(props){
                 allCanvas={allCanvas}
                 setSize={setSize}
                 size={size}
+                zoom={zoom}
             />
         </TabPane>
         <TabPane tab="语言设置" key="语言设置">

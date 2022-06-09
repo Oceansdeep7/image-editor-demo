@@ -1,6 +1,7 @@
-import React, {useState} from 'react'
+import React, {useEffect, useState} from 'react'
 import {Empty, Form, InputNumber, Select} from 'antd';
 import { SketchPicker } from 'react-color'
+import fonts from '../assets/TH.ttf'
 
 const STYLE_OPTIONS = [
     {
@@ -30,21 +31,28 @@ const ALIGN_OPTIONS = [
 
 function Attribute(props) {
     const {activeElement, activeCanvas, setActiveElement} = props
-    const [_,forceUpdate] = useState(0)
-    // async function loadFonts() {
-    //     const target = canvasRef.current.getActiveObject()
-    //     const font = new FontFace('pf', `url(${fonts})`);
-    //     setLoading(true)
-    //     await font.load();
-    //     document.fonts.add(font);
-    //     target.set("fontFamily", 'pf')
-    //     canvasRef.current.renderAll()
-    //     setLoading(false)
-    //     console.log(canvasRef.current.toObject())
-    //     console.log(canvasRef.current.toJSON())
-    //     console.log(canvasRef.current.item(0)); // reference fabric.Rect added earlier (first object)
-    //     console.log(canvasRef.current.getObjects()); // get all objects on canvas (rect will be first and only)
-    // }
+    const [,forceUpdate] = useState(0)
+    const [fontLoading, setFontLoading] = useState(false)
+
+    useEffect(()=>{
+
+        async function loadFonts() {
+            console.log(document.fonts)
+            const font = new FontFace('PingFang', `url(${fonts})`);
+            setFontLoading(true)
+            await font.load();
+            document.fonts.add(font);
+            setFontLoading(false)
+        }
+
+        loadFonts().catch(res => {
+            console.log(res)
+            setFontLoading(false)
+        })
+
+
+    },[])
+
 
     const onChange = (type, value) => {
         activeElement.set({
@@ -62,6 +70,17 @@ function Attribute(props) {
                     >
                         <InputNumber precision={0} min={1} value={activeElement.fontSize}
                                      onChange={value => onChange('fontSize', value)}/>
+                    </Form.Item>
+                    <Form.Item
+                        label="字体"
+                    >
+                        <Select options={[{
+                            value: 'PingFang', label: '泰语字体'
+                        }]}
+                                loading={fontLoading}
+                                disabled={fontLoading}
+                                value={activeElement.fontFamily}
+                                onChange={value => onChange('fontFamily', value)}/>
                     </Form.Item>
                     <Form.Item
                         label="样式"
@@ -96,7 +115,7 @@ function Attribute(props) {
                         />
                     </Form.Item>
                 </>
-                : <Empty/>
+                : <Empty description="需要选中文本框"/>
         }
     </div>
 }

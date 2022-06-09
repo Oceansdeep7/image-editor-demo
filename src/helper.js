@@ -24,7 +24,7 @@ const baseShapeConfig = {
         height: 60,
         fill: '#06c',
         fontSize: 40,
-        // splitByGrapheme: true,
+        splitByGrapheme: false,
         lockScalingY: true,
         textAlign: 'left',
         lineHeight: 1,
