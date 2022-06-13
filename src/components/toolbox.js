@@ -1,4 +1,4 @@
-import React, {useState} from 'react'
+import React, {useMemo, useState} from 'react'
 import {Select, Tabs} from 'antd';
 import Asset from './asset'
 import {LANGUAGE_OPTIONS} from '../constants'
@@ -8,9 +8,13 @@ const { TabPane } = Tabs;
 
 function ToolBox(props){
 
-    const { allCanvas, targetLanguage, setTargetLanguage,
+    const { allCanvas, setTargetLanguages,
         activeElement, activeCanvas, setActiveElement, setSize, size, zoom } = props
     const [activeKey, setActiveKey] = useState("资源")
+
+    const languages = useMemo(()=>{
+        return allCanvas.slice(1).map(({language}) => language)
+    })
 
     // async function loadFonts() {
     //     const target = canvasRef.current.getActiveObject()
@@ -49,9 +53,11 @@ function ToolBox(props){
         </TabPane>
         <TabPane tab="语言设置" key="语言设置">
             <Select
+                mode="multiple"
+                style={{width: '100%'}}
                 options={LANGUAGE_OPTIONS}
-                value={targetLanguage}
-                onChange={setTargetLanguage}
+                value={languages}
+                onChange={setTargetLanguages}
             />
         </TabPane>
         )}

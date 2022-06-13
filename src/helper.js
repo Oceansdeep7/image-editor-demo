@@ -17,6 +17,14 @@ export function getImageUrl(id) {
     return img.toDataURL("image/png");
 }
 
+export function getImageBlob(zip, id, fileName) {
+    const img = document.getElementById(id);
+    return new Promise((resolve) => img.toBlob((blob)=> {
+        zip.file(fileName, blob)
+        resolve()
+    }));
+}
+
 const baseShapeConfig = {
     Textbox: {
         text: '请输入',
@@ -26,7 +34,7 @@ const baseShapeConfig = {
         fontSize: 40,
         splitByGrapheme: false,
         lockScalingY: true,
-        textAlign: 'left',
+        textAlign: 'center',
         lineHeight: 1,
     }
 }

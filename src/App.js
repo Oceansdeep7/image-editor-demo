@@ -1,4 +1,4 @@
-import {Layout, Checkbox, Space, Button} from 'antd';
+import {Layout, Checkbox, Space, Button, message} from 'antd';
 import {
     FontSizeOutlined,
     RedoOutlined,
@@ -10,16 +10,17 @@ import {useEffect, useState, useRef, useReducer} from 'react';
 import './App.less'
 import Canvas from './components/canvas'
 import ToolBox from './components/toolbox'
-import {insertElement} from './helper'
+import {download, getImageBlob, getImageUrl, insertElement} from './helper'
 import axios from 'axios'
 import lodash from 'lodash'
+import {nanoid} from 'nanoid'
+import JSZip from 'jszip'
 
 const { Header, Sider, Content } = Layout;
 const v2Client = () => axios.create({
     baseURL: '/v2',
     responseType: 'json',
     headers: {
-     
     },
 })
 
@@ -30,9 +31,7 @@ function loadSnapshot(snapshot = {}, updateMethods){
     } = snapshot
     Object.keys(snapshot).forEach(key => {
         const methodName = `set${key
-            .replace(/^./g, ($1) => {
-                return $1.toUpperCase()
-            })}`
+            .replace(/^./g, ($1) => $1.toUpperCase())}`
         switch (key){
             case 'allCanvas':
                 updateMethods[methodName](
@@ -108,25 +107,19 @@ function reducer(state, action) {
 
 export default function App() {
     const [size, setSize] = useState([720, 1280]);
-    const [targetLanguage, setTargetLanguage] = useState('th')
-    const [zoom, setZoom] = useState(1)
+    const [zoom, setZoom] = useState(0.5)
     const [allCanvas, setAllCanvas] = useState([
         {
-            language: '默认',
-            attrs: {},
+            language: 'default',
         },
-        {
-            language: '阿拉伯语',
-            attrs: {},
-        }
     ])
     const [activeCanvas, setActiveCanvas] = useState(allCanvas[0])
     const [activeElement, setActiveElement] = useState(null)
+    const [downloading, setDownloading] = useState(false)
 
     const [{redoQueue, undoQueue}, dispatch] = useReducer(reducer, {
         updateMethods: {
             setSize,
-            setTargetLanguage,
             setZoom,
             setAllCanvas,
             setActiveCanvas,
@@ -163,11 +156,26 @@ export default function App() {
     },[activeElement])
 
     const handleRedo = () => {
-        dispatch({type: 'redo', payload: {activeCanvas, allCanvas, targetLanguage, size, zoom}})
+        dispatch({type: 'redo', payload: {activeCanvas, allCanvas, size, zoom}})
     }
 
     const handleUndo = () => {
-        dispatch({type: 'undo', payload: {activeCanvas, allCanvas, targetLanguage, size, zoom}})
+        dispatch({type: 'undo', payload: {activeCanvas, allCanvas, size, zoom}})
+    }
+
+    const handleChangeLanguages = (languages)  => {
+        const newAllCanvas = [allCanvas[0]]
+        languages.forEach(language => {
+            const item = allCanvas.find(item => item.language === language)
+            if(item){
+                newAllCanvas.push(item)
+            }else{
+                newAllCanvas.push({
+                    language,
+                })
+            }
+        })
+        setAllCanvas(newAllCanvas)
     }
 
     const translateText = (canvas, index, newText) => {
@@ -176,7 +184,7 @@ export default function App() {
             const {width} = text
             text.set({
                 text: newText,
-                fontFamily: 'PingFang',
+                // fontFamily: 'PingFang',
                 lockScalingY: true,
             })
             if (text.width > width) {
@@ -196,24 +204,26 @@ export default function App() {
         if(!text_list.length){
             return
         }
-        dispatch({type: 'getSnapshot', payload: {activeCanvas, allCanvas, targetLanguage}})
-        setAllCanvas([...allCanvas.map(item => ({...item, waiting: true}))])
-        v2Client().post('/creative_texts/translate', {
-            text_list,
-            target: targetLanguage,
-        }).then((res) => {
-                const data = res.data.data
-                const canvas = allCanvas[1].ref
-                const cb = () => {
-                    canvas.renderAll()
-                    data.forEach((text, index) => {
-                        translateText(canvas, index, text)
-                    })
-                    setAllCanvas([...allCanvas.map(item => ({...item, waiting: false}))])
+        dispatch({type: 'getSnapshot', payload: {activeCanvas, allCanvas}})
+        setAllCanvas([...allCanvas.map(item => ({...item, translating: true}))])
+        allCanvas.slice(1).forEach(({ref: canvas, language: target}) => {
+            v2Client().post('/creative_texts/translate', {
+                text_list,
+                target,
+            }).then((res) => {
+                    const data = res.data.data
+                    const cb = () => {
+                        canvas.renderAll()
+                        data.forEach((text, index) => {
+                            translateText(canvas, index, text)
+                        })
+                        canvas.translating = false
+                        setAllCanvas([...allCanvas])
+                    }
+                    canvas.loadFromJSON(allCanvas[0].ref.toJSON(), cb)
                 }
-                allCanvas[1].ref.loadFromJSON(allCanvas[0].ref.toJSON(), cb)
-            }
-        )
+            )
+        })
     }
 
     const zoomChange = (type) => {
@@ -230,7 +240,45 @@ export default function App() {
         setZoom(newZoom)
     }
 
-    // console.log(allCanvas, activeElement)
+    const handleBatchDownload = () => {
+        allCanvas.forEach(({ref: canvasRef, language}, index) => {
+            canvasRef.discardActiveObject()
+            canvasRef.renderAll();
+            const width = canvasRef.width / zoom
+            const height = canvasRef.height / zoom
+            const objects = canvasRef.getObjects()
+            if (objects.some(item =>  item.top < 10 || item.left <10 || item.top + item.height > height - 10 || item.left + item.width > width - 10
+            )) {
+                message.error(`图${index+1}有溢出，请修改`)
+            } else {
+                download(getImageUrl(`${language}-canvas`), `${language}_${nanoid(6)}.png`)
+            }
+        })
+    }
+
+    const handleDownloadZip = () => {
+        setDownloading(true)
+        const zip = new JSZip();
+        Promise.all(
+                allCanvas.map(({ref: canvasRef, language}) => {
+                    canvasRef.discardActiveObject()
+                    canvasRef.renderAll();
+                    return getImageBlob(zip, `${language}-canvas`, `${language}_${nanoid(6)}.png`)
+                })
+        ).then(() => {
+            zip.generateAsync({type: "blob"})
+                .then(function (content) {
+                    let a = document.createElement('a');
+                    let url = window.URL.createObjectURL(content);
+                    a.href = url;
+                    a.download = `${nanoid(6)}.zip`
+                    a.click();
+                    window.URL.revokeObjectURL(url);
+                    setDownloading(false)
+                })
+        })
+    }
+
 
     return (
         <Layout>
@@ -246,6 +294,8 @@ export default function App() {
                     </Button>
                     <Button disabled={undoQueue.length === 0} onClick={handleUndo}>翻译<UndoOutlined/></Button>
                     <Button disabled={redoQueue.length === 0} onClick={handleRedo}>翻译<RedoOutlined/></Button>
+                    <Button onClick={handleBatchDownload}>批量下载</Button>
+                    <Button loading={downloading} disabled={downloading} onClick={handleDownloadZip}>打包下载</Button>
                 </Space>
             </Header>
             <Layout>
@@ -260,6 +310,7 @@ export default function App() {
                             setActiveElement={setActiveElement}
                             allCanvas={allCanvas}
                             index={index}
+                            zoom={zoom}
                         />)}
                     </div>
                 </Content>
@@ -269,11 +320,10 @@ export default function App() {
                         setSize={setSize}
                         size={size}
                         zoom={zoom}
-                        targetLanguage={targetLanguage}
-                        setTargetLanguage={setTargetLanguage}
                         activeElement={activeElement}
                         activeCanvas={activeCanvas}
                         setActiveElement={setActiveElement}
+                        setTargetLanguages={handleChangeLanguages}
                     />
                 </Sider>
             </Layout>
