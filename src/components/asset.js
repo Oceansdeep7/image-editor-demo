@@ -1,9 +1,19 @@
 import React, {useState} from 'react'
 import {Button, Upload} from 'antd';
 import {fabric} from 'fabric'
+import ColorThief from 'colorthief/dist/color-thief.mjs'
+const colorThief = new ColorThief();
+
+const rgbToHex = (r, g, b) => '#' + [r, g, b].map(x => {
+    const hex = x.toString(16)
+    return hex.length === 1 ? '0' + hex : hex
+}).join('')
+
+const unique = (arr) => [...new Set(arr)]
 
 function Asset(props) {
-    const {allCanvas, setSize, zoom} = props
+    const {allCanvas, setSize, zoom, setPresetColors} = props
+    const [imageSrc, setImageSrc] = useState(undefined)
 
     // async function loadFonts() {
     //     const target = canvasRef.current.getActiveObject()
@@ -28,6 +38,7 @@ function Asset(props) {
                 // const reader = new FileReader();
                 const image = window.URL.createObjectURL(file)
                 // console.log(window.URL.createObjectURL(file))
+                setImageSrc(image)
                 fabric.Image.fromURL(image, img => {
                     allCanvas.forEach(({ref: canvas}) => {
                         canvas.setBackgroundImage(
@@ -53,6 +64,7 @@ function Asset(props) {
             })}>
             <Button>背景图选择</Button>
         </Upload>
+        {imageSrc && <img  style={{display: 'none'}} src={imageSrc} width="100%" id="bg-image" onLoad={(e)=> setPresetColors(unique(colorThief.getPalette(document.querySelector('#bg-image'), 16).map(item => rgbToHex(...item))))}/> }
     </div>
 }
 

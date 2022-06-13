@@ -7,9 +7,11 @@ import CanvasSettings from './canvasSettings'
 const { TabPane } = Tabs;
 
 function ToolBox(props){
-
     const { allCanvas, setTargetLanguages,
-        activeElement, activeCanvas, setActiveElement, setSize, size, zoom } = props
+        activeElement, activeCanvas, setActiveElement,
+        setSize, size, zoom,
+        presetColors,  setPresetColors,
+    } = props
     const [activeKey, setActiveKey] = useState("资源")
 
     const languages = useMemo(()=>{
@@ -33,13 +35,14 @@ function ToolBox(props){
 
     return <Tabs onChange={setActiveKey} activeKey={activeKey}>
         <TabPane tab="资源" key="资源">
-            <Asset allCanvas={allCanvas} zoom={zoom}/>
+            <Asset allCanvas={allCanvas} zoom={zoom} setPresetColors={setPresetColors}/>
         </TabPane>
         <TabPane tab="属性" key="属性">
             <Attribute
                 activeElement={activeElement}
                 activeCanvas={activeCanvas}
                 setActiveElement={setActiveElement}
+                presetColors={presetColors}
             />
         </TabPane>
         <TabPane tab="画板" key="画板">

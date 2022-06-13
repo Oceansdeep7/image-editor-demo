@@ -116,6 +116,7 @@ export default function App() {
     const [activeCanvas, setActiveCanvas] = useState(allCanvas[0])
     const [activeElement, setActiveElement] = useState(null)
     const [downloading, setDownloading] = useState(false)
+    const [presetColors, setPresetColors] = useState([])
 
     const [{redoQueue, undoQueue}, dispatch] = useReducer(reducer, {
         updateMethods: {
@@ -324,6 +325,8 @@ export default function App() {
                         activeCanvas={activeCanvas}
                         setActiveElement={setActiveElement}
                         setTargetLanguages={handleChangeLanguages}
+                        presetColors={presetColors}
+                        setPresetColors={setPresetColors}
                     />
                 </Sider>
             </Layout>

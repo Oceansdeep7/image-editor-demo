@@ -10,6 +10,7 @@
     "@testing-library/user-event": "^13.5.0",
     "antd": "^4.20.7",
     "axios": "^0.27.2",
+    "colorthief": "^2.3.2",
     "craco-less": "^2.0.0",
     "fabric": "^5.2.1",
     "jszip": "^3.10.0",

@@ -30,7 +30,7 @@ const ALIGN_OPTIONS = [
 ]
 
 function Attribute(props) {
-    const {activeElement, activeCanvas, setActiveElement} = props
+    const {activeElement, activeCanvas, setActiveElement, presetColors } = props
     const [,forceUpdate] = useState(0)
     const [fontLoading, setFontLoading] = useState(false)
 
@@ -101,6 +101,7 @@ function Attribute(props) {
                     >
                         <SketchPicker
                             color={activeElement.fill}
+                            presetColors={presetColors}
                             onChangeComplete={(color) =>  onChange('fill', color.hex)
                             }
                         />
@@ -110,6 +111,7 @@ function Attribute(props) {
                     >
                         <SketchPicker
                             color={activeElement.backgroundColor}
+                            presetColors={presetColors}
                             onChangeComplete={(color) =>  onChange('backgroundColor', color.hex)
                             }
                         />
