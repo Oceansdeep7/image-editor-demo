@@ -22,7 +22,7 @@ const v2Client = () => axios.create({
     baseURL: '/v2',
     responseType: 'json',
     headers: {
-    
+
     },
 })
 
@@ -201,7 +201,7 @@ export default function App() {
             const {width} = text
             text.set({
                 text: newText,
-                lockScalingY: true,
+                // lockScalingY: true,
             })
             if (text.width > width) {
                 text.set({
