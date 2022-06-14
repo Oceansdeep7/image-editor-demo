@@ -44,8 +44,6 @@ function Canvas(props) {
                 cornerStyle: "circle",
                 transparentCorners: false,
             });
-
-
             const shape = new fabric.Textbox(nanoid(8), {
                 text: '请输入',
                 width: 120,
@@ -54,7 +52,7 @@ function Canvas(props) {
                 left: size[0] / 2 - 60,
                 top: size[1] / 2 - 20,
                 lineHeight: 1,
-                lockScalingY: true,
+                // lockScalingY: true,
                 fontSize: 40,
                 textAlign: 'center',
                 splitByGrapheme: false,
@@ -91,6 +89,16 @@ function Canvas(props) {
                 item.ref.renderAll();
             })
         });
+
+        // canvasRef.current.on('object:modified', function(event) {
+        //     if (event.target) {
+        //         event.target.fontSize *= event.target.scaleX;
+        //         event.target.fontSize = event.target.fontSize.toFixed(0);
+        //         event.target.scaleX = 1;
+        //         event.target.scaleY = 1;
+        //         event.target._clearCache();
+        //     }
+        // });
 
         // event:added
         // event:removed
@@ -147,36 +155,27 @@ function Canvas(props) {
         //
         // });
 
-        // canvasRef.current.on("object:scaling", function (obj) {
-        //     if (obj.target &&  obj.target.height && obj.target.scaleY) {
-        //         // if (obj.target.id.includes("txt")) {
-        //         let lastHeight
-        //         let lastWidth
-        //
-        //         const updateTextSize = () => {
-        //             if (obj.target) {
-        //                 if (obj.target.height && obj.target.scaleY) {
-        //                     lastHeight = obj.target.height * obj.target.scaleY;
-        //                     // lastWidth = obj.target.width * obj.target.scaleX;
-        //                 }
-        //
-        //                 obj.target.set({
-        //                     height: lastHeight || obj.target.height,
-        //                     // width: lastWidth || obj.target.width,
-        //                     scaleY: 1,
-        //                 });
-        //
-        //                 canvasRef.current.renderAll();
-        //             }
-        //         };
-        //
-        //
-        //         updateTextSize();
-        //         // }
-        //     }
-        // });
-
-    }, [])
+        canvasRef.current.on("object:scaling", function (options) {
+            if (options.target) {
+                const {height, scaleY, width, fontSize, fontFamily, fontStyle, textAlign} = options.target
+                const newFontSize = (fontSize * scaleY).toFixed(0)
+                if(height && scaleY && newFontSize > 12) {
+                    options.target.set({
+                        height: height * scaleY || height,
+                        width: width * scaleY || width,
+                        fontSize: newFontSize,
+                        scaleY: 1,
+                        scaleX: 1,
+                        fontFamily,
+                        fontStyle,
+                        textAlign,
+                    });
+                    canvasRef.current.renderAll();
+                    setActiveElement({...options.target})
+                }
+            }
+        });
+        }, [])
 
     return <Spin spinning={translating}>
         <div style={{boxShadow: language === activeLanguage && '0 0 0 1px #1890FF', margin: 1}}>

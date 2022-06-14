@@ -15,12 +15,14 @@ import axios from 'axios'
 import lodash from 'lodash'
 import {nanoid} from 'nanoid'
 import JSZip from 'jszip'
+import {fabric} from 'fabric'
 
 const { Header, Sider, Content } = Layout;
 const v2Client = () => axios.create({
     baseURL: '/v2',
     responseType: 'json',
     headers: {
+    
     },
 })
 
@@ -136,10 +138,24 @@ export default function App() {
 
     useEffect(() => {
         const handleDeleteElement = (e) => {
-            if (e.code === 'Backspace' && activeCanvasRef.current && activeElementRef.current) {
-                    activeCanvasRef.current.ref.remove(activeElementRef.current)
-                    activeCanvasRef.current.ref.requestRenderAll()
+            const canvas = activeCanvasRef.current
+            const element = activeElementRef.current
+            if (e.code === 'Backspace' && canvas && element && !element.isEditing) {
+                    canvas.ref.remove(activeElementRef.current)
+                    canvas.ref.requestRenderAll()
                     setActiveElement(null)
+            }
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV' && canvas && element && !element.isEditing) {
+                const textBox = new fabric.Textbox(nanoid(8), {
+                   ...element.toJSON(),
+                    left: element.left + 10,
+                    top:  element.top + 10,
+                })
+                canvas.ref.discardActiveObject()
+                canvas.ref.add(textBox)
+                canvas.ref.setActiveObject(textBox)
+                canvas.ref.requestRenderAll()
+                setActiveElement(textBox)
             }
         }
         window.addEventListener('keydown', handleDeleteElement)
@@ -185,7 +201,6 @@ export default function App() {
             const {width} = text
             text.set({
                 text: newText,
-                // fontFamily: 'PingFang',
                 lockScalingY: true,
             })
             if (text.width > width) {

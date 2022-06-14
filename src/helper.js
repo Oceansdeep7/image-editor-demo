@@ -33,7 +33,7 @@ const baseShapeConfig = {
         fill: '#06c',
         fontSize: 40,
         splitByGrapheme: false,
-        lockScalingY: true,
+        // lockScalingY: true,
         textAlign: 'center',
         lineHeight: 1,
     }
