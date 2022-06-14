@@ -221,7 +221,7 @@ export default function App() {
             return
         }
         dispatch({type: 'getSnapshot', payload: {activeCanvas, allCanvas}})
-        setAllCanvas([...allCanvas.map(item => ({...item, translating: true}))])
+        setAllCanvas([...allCanvas.map((item, index) => ({...item, translating: index !== 0}))])
         allCanvas.slice(1).forEach(({ref: canvas, language: target}) => {
             v2Client().post('/creative_texts/translate', {
                 text_list,
