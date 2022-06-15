@@ -57,7 +57,7 @@ function Canvas(props) {
                 fontSize: 40,
                 textAlign: 'center',
                 splitByGrapheme: false,
-                fontFamily: 'default',
+                fontFamily: '系统默认字体',
                 // styles: {
                 //     0: {
                 //         0: { textDecoration: 'underline', fontSize: 80 },

@@ -36,7 +36,7 @@ const baseShapeConfig = {
         // lockScalingY: true,
         textAlign: 'center',
         lineHeight: 1,
-        fontFamily: 'default',
+        fontFamily: '系统默认字体',
     }
 }
 
