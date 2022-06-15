@@ -1,7 +1,7 @@
-import React, {useEffect, useState} from 'react'
+import React, {useState} from 'react'
 import {Empty, Form, InputNumber, Select} from 'antd';
 import { SketchPicker } from 'react-color'
-import fonts from '../assets/TH.ttf'
+import {loadFont} from '../helper'
 
 const STYLE_OPTIONS = [
     {
@@ -30,31 +30,25 @@ const ALIGN_OPTIONS = [
 ]
 
 function Attribute(props) {
-    const {activeElement, activeCanvas, setActiveElement, presetColors } = props
+    const {activeElement, activeCanvas, setActiveElement, presetColors, fontOptions, setSpinning} = props
     const [,forceUpdate] = useState(0)
-    const [fontLoading, setFontLoading] = useState(false)
-
-    useEffect(()=>{
-
-        async function loadFonts() {
-            console.log(document.fonts)
-            const font = new FontFace('PingFang', `url(${fonts})`);
-            setFontLoading(true)
-            await font.load();
-            document.fonts.add(font);
-            setFontLoading(false)
-        }
-
-        loadFonts().catch(res => {
-            console.log(res)
-            setFontLoading(false)
-        })
-
-
-    },[])
-
 
     const onChange = (type, value) => {
+        if (type === 'fontFamily') {
+            const name = fontOptions.find(item => item.value === value).label
+            const fonts = [...document.fonts.values()]
+            const font = fonts.find(item => item.family === name)
+            if(!font || font?.status !== 'loaded') {
+                setSpinning(true)
+                return loadFont(name, value).then(() => {
+                    activeElement.set({
+                        [type]: value
+                    })
+                    setSpinning(false)
+                    activeCanvas.ref.renderAll()
+                })
+            }
+        }
         activeElement.set({
             [type]: value
         })
@@ -74,11 +68,9 @@ function Attribute(props) {
                     <Form.Item
                         label="字体"
                     >
-                        <Select options={[{
-                            value: 'PingFang', label: '泰语字体'
-                        }]}
-                                loading={fontLoading}
-                                disabled={fontLoading}
+                        <Select options={fontOptions}
+                                loading={activeCanvas.loadingFont}
+                                disabled={activeCanvas.loadingFont}
                                 value={activeElement.fontFamily}
                                 onChange={value => onChange('fontFamily', value)}/>
                     </Form.Item>

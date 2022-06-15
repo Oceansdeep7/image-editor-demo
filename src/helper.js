@@ -36,6 +36,7 @@ const baseShapeConfig = {
         // lockScalingY: true,
         textAlign: 'center',
         lineHeight: 1,
+        fontFamily: 'default',
     }
 }
 
@@ -54,3 +55,8 @@ export function insertElement(type, canvas, size){
     canvas.add(shape);
 }
 
+export function loadFont(name, url) {
+    const font = new FontFace(name, `url(${(new URL(url)).toString()})`);
+    document.fonts.add(font)
+    return font.load()
+}

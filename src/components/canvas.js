@@ -5,12 +5,13 @@ import React, { useEffect, useState, useRef} from 'react';
 import {download, getImageUrl} from '../helper'
 
 function Canvas(props) {
-    const {data: {language = 'default', translating = false}, size,
-        setActiveCanvas, activeLanguage, setActiveElement,
+    const {data: {language, translating = false, loadingFont = false}, size,
+        setActiveCanvas,  activeCanvas, setActiveElement,
         allCanvas, index, dispatch, isModifiedByHistory, zoom } = props
     const id = `${language}-canvas`
     const canvasRef = useRef()
     const allCanvasRef = useRef(allCanvas)
+    const activeLanguage = activeCanvas.language
 
     useEffect(() => {
         allCanvasRef.current = allCanvas
@@ -56,6 +57,7 @@ function Canvas(props) {
                 fontSize: 40,
                 textAlign: 'center',
                 splitByGrapheme: false,
+                fontFamily: 'default',
                 // styles: {
                 //     0: {
                 //         0: { textDecoration: 'underline', fontSize: 80 },
@@ -177,7 +179,7 @@ function Canvas(props) {
         });
         }, [])
 
-    return <Spin spinning={translating}>
+    return <Spin spinning={translating || loadingFont}>
         <div style={{boxShadow: language === activeLanguage && '0 0 0 1px #1890FF', margin: 1}}>
             {/*<div>{language}</div>*/}
             <canvas id={id}/>

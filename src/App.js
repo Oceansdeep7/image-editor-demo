@@ -1,4 +1,4 @@
-import {Layout, Checkbox, Space, Button, message} from 'antd';
+import {Layout, Space, Button, message, Spin} from 'antd';
 import {
     FontSizeOutlined,
     RedoOutlined,
@@ -10,7 +10,7 @@ import {useEffect, useState, useRef, useReducer} from 'react';
 import './App.less'
 import Canvas from './components/canvas'
 import ToolBox from './components/toolbox'
-import {download, getImageBlob, getImageUrl, insertElement} from './helper'
+import {download, getImageBlob, getImageUrl, insertElement, loadFont} from './helper'
 import axios from 'axios'
 import lodash from 'lodash'
 import {nanoid} from 'nanoid'
@@ -20,6 +20,14 @@ import {fabric} from 'fabric'
 const { Header, Sider, Content } = Layout;
 const v2Client = () => axios.create({
     baseURL: '/v2',
+    responseType: 'json',
+    headers: {
+
+    },
+})
+
+const v1Client = () => axios.create({
+    baseURL: '/v1',
     responseType: 'json',
     headers: {
 
@@ -119,6 +127,8 @@ export default function App() {
     const [activeElement, setActiveElement] = useState(null)
     const [downloading, setDownloading] = useState(false)
     const [presetColors, setPresetColors] = useState([])
+    const [spinning, setSpinning] = useState(true)
+    const [infos, setInfos] = useState({languages: [], fonts: [], relations: []})
 
     const [{redoQueue, undoQueue}, dispatch] = useReducer(reducer, {
         updateMethods: {
@@ -132,20 +142,39 @@ export default function App() {
         undoQueue: [],
     });
 
-    const activeLanguage = activeCanvas.language
     const activeCanvasRef = useRef()
     const activeElementRef = useRef()
+    const spinningRef = useRef()
+
+    useEffect(() => {
+            v1Client().get('/material-font/infos').then(res => {
+                    const data = res.data.data
+                    const {relations = [], fonts = []} = data
+                    relations.forEach(item => {
+                        const fontName = item.字体
+                        const font = fonts.find(font => font.name === fontName)
+                        const loadFonts = [...document.fonts.values()]
+                        if (font && !loadFonts.find(item => item.family === fontName)) {
+                            loadFont(font.name, font.url)
+                        }
+                    })
+                    setInfos(data)
+                    setSpinning(false)
+                }
+            )
+        }
+        , [])
 
     useEffect(() => {
         const handleDeleteElement = (e) => {
             const canvas = activeCanvasRef.current
             const element = activeElementRef.current
-            if (e.code === 'Backspace' && canvas && element && !element.isEditing) {
+            if (e.code === 'Backspace' && canvas && element && !element.isEditing && !spinningRef.current) {
                     canvas.ref.remove(activeElementRef.current)
                     canvas.ref.requestRenderAll()
                     setActiveElement(null)
             }
-            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV' && canvas && element && !element.isEditing) {
+            if ((e.ctrlKey || e.metaKey) && e.code === 'KeyV' && canvas && element && !element.isEditing && !spinningRef.current) {
                 const textBox = new fabric.Textbox(nanoid(8), {
                    ...element.toJSON(),
                     left: element.left + 10,
@@ -172,6 +201,10 @@ export default function App() {
         activeElementRef.current = activeElement
     },[activeElement])
 
+    useEffect(()=>{
+        spinningRef.current = spinning
+    },[spinning])
+
     const handleRedo = () => {
         dispatch({type: 'redo', payload: {activeCanvas, allCanvas, size, zoom}})
     }
@@ -195,14 +228,21 @@ export default function App() {
         setAllCanvas(newAllCanvas)
     }
 
-    const translateText = (canvas, index, newText) => {
+    const translateText = (canvas, index, newText, fontFamily) => {
         if (canvas.item(index)) {
             const text = canvas.item(index)
             const {width} = text
-            text.set({
-                text: newText,
-                // lockScalingY: true,
-            })
+            if(fontFamily) {
+                text.set({
+                    text: newText,
+                    fontFamily,
+                    // lockScalingY: true,
+                })
+            }else{
+                text.set({
+                    text: newText
+                })
+            }
             if (text.width > width) {
                 text.set({
                     fontSize:  +(text.fontSize * width / (text.width + 1)).toFixed(0),
@@ -221,25 +261,40 @@ export default function App() {
             return
         }
         dispatch({type: 'getSnapshot', payload: {activeCanvas, allCanvas}})
-        setAllCanvas([...allCanvas.map((item, index) => ({...item, translating: index !== 0}))])
-        allCanvas.slice(1).forEach(({ref: canvas, language: target}) => {
-            v2Client().post('/creative_texts/translate', {
+       setSpinning(true)
+       Promise.all(allCanvas.slice(1).map(({ref: canvas, language: target}, index) => {
+           return v2Client().post('/creative_texts/translate', {
                 text_list,
                 target,
             }).then((res) => {
                     const data = res.data.data
                     const cb = () => {
-                        canvas.renderAll()
-                        data.forEach((text, index) => {
-                            translateText(canvas, index, text)
-                        })
-                        canvas.translating = false
-                        setAllCanvas([...allCanvas])
+                        const relation = infos.relations.find(item => item.语言 === target)
+                        const render = (fontFamily) => {
+                            data.forEach((text, index) => {
+                                translateText(canvas, index, text, fontFamily)
+                            })
+                            return Promise.resolve()
+
+                        }
+                        if(relation){
+                            const fonts = [...document.fonts.values()]
+                            const font = fonts.find(item => item.family === relation.字体)
+                            const fontFamily = relation.字体
+                            if(font && font.status !== 'loaded'){
+                                return font.loaded.then(() => {
+                                    return render(fontFamily)
+                                })
+                            }else{
+                                return render(fontFamily)
+                            }
+                        }
+                      return render()
                     }
                     canvas.loadFromJSON(allCanvas[0].ref.toJSON(), cb)
                 }
             )
-        })
+        })).then(()=> setSpinning(false))
     }
 
     const zoomChange = (type) => {
@@ -295,8 +350,8 @@ export default function App() {
         })
     }
 
-
     return (
+        <Spin spinning={spinning}>
         <Layout>
             <Header>
                 <Space>
@@ -321,7 +376,7 @@ export default function App() {
                             size={size}
                             key={data.language}
                             data={data}
-                            activeLanguage={activeLanguage}
+                            activeCanvas={activeCanvas}
                             setActiveCanvas={setActiveCanvas}
                             setActiveElement={setActiveElement}
                             allCanvas={allCanvas}
@@ -342,10 +397,13 @@ export default function App() {
                         setTargetLanguages={handleChangeLanguages}
                         presetColors={presetColors}
                         setPresetColors={setPresetColors}
+                        infos={infos}
+                        setSpinning={setSpinning}
                     />
                 </Sider>
             </Layout>
         </Layout>
+        </Spin>
     );
 }
 
